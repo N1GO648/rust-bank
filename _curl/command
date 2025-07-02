@@ -1,0 +1,42 @@
+# 1) Login to obtain JWT (raw JSON output)
+curl -i -X POST http://127.0.0.1:8080/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","hashed_password":"fake"}'
+
+# 2) Extract the token into a shell variable without using jq
+
+## Option A: Using Python (requires python3)
+_resp=$(curl -s -X POST http://127.0.0.1:8080/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","hashed_password":"fake"}')
+
+TOKEN=$(printf '%s' "$_resp" \
+  | python3 -c 'import sys,json; print(json.load(sys.stdin)["token"])')
+
+## Option B: Using sed (POSIX shell)
+TOKEN=$(curl -s -X POST http://127.0.0.1:8080/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","hashed_password":"fake"}' \
+  | sed -E 's/.*"token"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')
+
+echo "Using token: $TOKEN"
+
+# 3) Buy stock
+curl -i -X POST http://127.0.0.1:8080/buy \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"stock_id":"cccccccc-cccc-cccc-cccc-cccccccccccc","quantity":100}'
+
+# 4) Sell stock
+curl -i -X POST http://127.0.0.1:8080/sell \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"stock_id":"cccccccc-cccc-cccc-cccc-cccccccccccc","quantity":50}'
+
+# 5) List your transactions
+curl -i -X GET http://127.0.0.1:8080/transactions \
+  -H "Authorization: Bearer $TOKEN"
+
+# 6) Get stock details by symbol
+curl -i -X GET http://127.0.0.1:8080/stocks/TEST \
+  -H "Authorization: Bearer $TOKEN"
